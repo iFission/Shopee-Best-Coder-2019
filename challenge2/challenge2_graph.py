@@ -51,7 +51,7 @@ def find_repeated_info(df):
 
 def build_graph(start, end):
     # build graph
-    global graph
+    graph = nx.Graph()
     # using the info as edge, associated userid are linked nodes
     for info_repeated in tqdm(info_with_multiple_userid_ls[start:end]):
         # get the associated userid
@@ -62,28 +62,42 @@ def build_graph(start, end):
             graph.add_edge(userid_1, userid_2)
 
     # return graph
+    return graph
 
 
-from multiprocessing import Process
+result_list = []
+
+
+def log_result(result):
+    global result_list
+    result_list.append(result)
+
+
+from multiprocessing import Pool
 
 
 def split_build_graph(split_count=12):
 
+    pool = Pool()
+
     split_size = len(info_with_multiple_userid_ls) // split_count
-    threads = []
+
     for i in range(split_count):
         # determine the indices of the list this thread will handle
         start = i * split_size
         # special case on the last chunk to account for uneven splits
         end = None if i + 1 == split_count else (i + 1) * split_size
 
-        # create the thread
-        threads.append(Process(target=build_graph, args=(start, end)))
-        threads[-1].start()  # start the thread we just created
+        # create the pool
+        pool.apply_async(build_graph, args=(start, end), callback=log_result)
 
-    # wait for all threads to finish
-    for t in threads:
-        t.join()
+    pool.close()
+    pool.join()
+
+    # join all graphs
+    global graph
+    result_list.append(graph)
+    graph = nx.compose_all(result_list)
 
     print(graph.number_of_edges())
     print(graph.number_of_nodes())
@@ -95,15 +109,15 @@ graph = nx.Graph()
 merged = 0
 info_with_multiple_userid_ls = 0
 
-for df in [bank_accounts]:
+# multiprocessing, cut down processing time from 6 min to 1min20s
+for df in [bank_accounts, devices, credit_cards]:
     find_repeated_info(df)
-    split_build_graph(split_count=15)
-# graph = build_graph(devices, graph)
-# graph = build_graph(credit_cards, graph)
+    split_build_graph(split_count=8)
 
 #%%
 # check graph statistics
-
+print(graph.number_of_edges())
+print(graph.number_of_nodes())
 #%%
 # iterate through all orders
 orders_original = orders
