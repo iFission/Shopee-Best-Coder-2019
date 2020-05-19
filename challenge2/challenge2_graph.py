@@ -27,16 +27,31 @@ import itertools
 import networkx as nx
 
 # find duplicate entries with many userid
-bank_account_ls = bank_accounts.loc[:]['bank_account'].to_list()
-info_with_multiple_userid = list(unique_everseen(duplicates(bank_account_ls)))
+bank_account_ls = bank_accounts['bank_account'].to_list()
+info_with_multiple_userid_ls = list(
+    unique_everseen(duplicates(bank_account_ls)))
 
+#%%
+# construct new df, to cut down on the number of rows
+info_with_multiple_userid = pd.DataFrame(info_with_multiple_userid_ls,
+                                         columns=["info"])
+info_with_multiple_userid.head()
+
+merged = pd.merge(info_with_multiple_userid,
+                  bank_accounts,
+                  how="left",
+                  left_on="info",
+                  right_on=bank_accounts.columns[1]).drop(
+                      bank_accounts.columns[1], axis=1)
+
+#%%
 # build graph
 G = nx.Graph()
 # using the info as edge, associated userid are linked nodes
-for userid_repeated in tqdm(info_with_multiple_userid):
+for userid_repeated in tqdm(info_with_multiple_userid_ls):
     # get the associated userid
-    userid_ls = bank_accounts[bank_accounts['bank_account'].str.contains(
-        str(userid_repeated))]['userid'].tolist()
+    userid_ls = merged[merged['info'].isin([userid_repeated
+                                            ])]['userid'].tolist()
 
     for userid_1, userid_2 in itertools.combinations(userid_ls, 2):
         G.add_edge(userid_1, userid_2)
