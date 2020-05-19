@@ -1,4 +1,4 @@
- #%%
+#%%
 import pandas as pd
 from tqdm import tqdm
 
@@ -26,6 +26,10 @@ len(
         set(devices.loc[47388162]['device'].to_list())
         & set(devices.loc[20822974]['device'].to_list())))
 #%%
+
+# iterate through all orders
+# check if there's overlap of buyer_userid and seller_userid in device, credit_card, bank_account
+# check overlap by filtering each df with user_id, check device column, convert to list, then convert to set, then check overlap, then convert to list, then count the length of list
 
 orders_sub = orders
 for orderid, buyer_userid, seller_userid in tqdm(
